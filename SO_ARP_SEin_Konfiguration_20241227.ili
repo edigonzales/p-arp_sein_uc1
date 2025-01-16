@@ -1,0 +1,78 @@
+INTERLIS 2.3;
+
+/** !!------------------------------------------------------------------------------
+ *  !! Version    | wer | Änderung
+ *  !!------------------------------------------------------------------------------
+ *  !! 2024-12-27 | sz  | Initialerstellung
+ *  !!==============================================================================
+ */
+!!@ technicalContact=mailto:agi@bd.so.ch
+!!@ furtherInformation=https://geo.so.ch/models/ARP/SO_ARP_SEin_Konfiguration_20241227.uml
+!!@ shortDescription="Datenmodell für die (Teil-)Konfiguration der SEin-App"
+!!@ title="SEin-App Konfiguration"
+MODEL SO_ARP_SEin_Konfiguration_20241227 (de)
+AT "https://arp.so.ch"
+VERSION "2024-12-27"  =
+
+  TOPIC SEin =
+
+    !! TODO:
+    !! - "Objekt(blatt)" mit Name, Beschreibung und Link -> ggf. Spezialiserungen für Objektblatt und RRB (und Agglo) Gedöns
+    !! - Allgemeine Layer zB. Gemeindegrenzen -> ist_betroffen == NULL -> Anzeigelayer
+    !! - Layergruppe? Transparenz der einzelnen (spricht gegen kommasepariert)
+    !! -> Ich bräuchte eigentlich auch die Namen der einzelnen Layer. Ah sie haben ja die Gruppe als Gruppe und erfassen dann einfach die Layer als Einzellayer.
+    !! -> Mist, dann passt es nicht mehr zu jedes Thema ist betroffen oder nicht. 
+    !! -> Thema hat 1 oder mehrere Kartenlayer?
+    !! -> MMmh, nein. Anders lösen: Die anderen Layer des Aggloprogramms bleiben Themen. Die Betroffenheit ist aber durch
+    !! den 5. Generationlayer gesteuert.
+    
+    !! - Wenn wir unseren Client verwenden, müssen die benötigten WMS in unserem Client registriert sein.
+    !! - "Objekt(blatt)": Struktur oder Klasse?
+    !! - Velonetzkarte: "ist_betroffen" wird manuell erfasst
+    !! - Ablauf überlegen: Was wird wie/wann/wo nachgeführt?
+    !! - Metadaten-Klasse a la MGDM
+    !! - Welche Theman haben "Objekt(blatt)". Was ist Link und Name?
+    !! - Topic "Grundlagen" für Datenerfassung? z.B. Weiler und so. -> Kommt darauf an, ob das besser ist, als einfach "ist_betroffen" einer Gemeinde zu zuweisen -> Ah, ich muss ja auch immer das Objektblatt miterfassen.
+    !! -> eignet sich zum Durchspielen der Erfassung/Nachführung. Im Grundlagen Topic eher mit Klassen arbeiten und der Gemeinde zuweisen. ist_betroffen wird dann im Topic Auswertung automatisch gerechnet? 
+    !! -> würde auch mit Velonetzkarte funktionieren. Ich erfasse in der Klasse "Objektinfo" die Karte einmalig und weise sie dann den Gemeinden zu.
+    !! -> In welchem Topic ist dann Gruppe Thema etc.? In beiden? Wäre ja nicht schlimm, da es automatisch ausgewertet wird und ggf angereichert wird.
+    !! - Gemeinden mit Geometrien, damit man autark ist und ggü Fusionen unempfindlich
+    !! - braucht nocn Anzahl objekte. Könnte von Client gerechnt werden. Aber vielleicht fällt es uns einfacher.
+    !! - Spezialfall: Agglo. Hier muss manuell erfasst werden (link zu AggloProgramm-Seite) und automatisch gerechnet werden.
+
+    !! - Wildtierkorridore: nur Korridore werden für Berechnung benötigt, die anderen Objekte liege immer innerhalb.
+
+    !! - nachgelagerte Frage: mit/ohne Basket anlegen, damit nur ein Topic exportiert werden muss. falls metadaten, dann wohl eh ja.
+
+
+    CLASS Gruppe =
+      Name : MANDATORY TEXT*500;
+    END Gruppe;
+
+    CLASS Thema = 
+      Name : MANDATORY TEXT*500;
+      Karte : TEXT*500; !! nur layer id? Wenn Absprung, müssen wir sie ja bei uns haben.
+      !! Transparenz
+    END Thema;
+
+    CLASS Gemeinde =
+      Name : MANDATORY TEXT*200;
+      BFSNr : MANDATORY 2000 .. 3000;
+      BoundingBox : MANDATORY TEXT*100; !! billig und prüfen mit regexp, ggf Struktur mit JSON
+      UNIQUE BFSNr;
+    END Gemeinde;
+
+    ASSOCIATION Gruppe_Thema =
+      Gruppe_R -- {1} Gruppe;
+      Thema_R -- {0..*} Thema;
+    END Gruppe_Thema;
+
+    ASSOCIATION Thema_Gemeinde =
+      Thema_R -- {0..*} Thema;
+      Gemeinde_R -- {0..*} Gemeinde;
+      ist_betroffen : BOOLEAN;
+    END Thema_Gemeinde;
+
+  END SEin;
+
+END SO_ARP_SEin_Konfiguration_20241227.
