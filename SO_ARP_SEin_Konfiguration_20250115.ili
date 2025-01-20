@@ -43,6 +43,8 @@ VERSION "2025-01-15"  =
     /** Transparenz in Prozent
      */
     LayerTransparenz : 0 .. 100;
+
+    !! TODO: unique constraint Name und Gruppen-Name.
   END Thema;
 
   /** Enthält Informationen zu einem (generischen) Objekt. Das sind ein Name / eine Beschreibung / eine Umbschreibung und ein Link z.B zu einem PDF oder eine Webseite.
@@ -94,6 +96,15 @@ VERSION "2025-01-15"  =
     END Gemeinde;
 
   END Auswertung;
+
+
+  !! Achtung:
+  /** Das funktioniert solange es immer eine Objektinfo gibt.
+   *  Dann weiss man, dass die Gemeinde von diesem Thema betroffen ist.
+   *  Scheint gemässt Liste jetzt so zu sein ("keine Geodaten"). 
+   *  Sonst bräuchte es noch eine Assoziation zw. Thema und Gemeinde
+   *  und zusätzlichen Umbaulogik von Grundlagen zu Auswertung.
+   */
 
   TOPIC Grundlagen =
 

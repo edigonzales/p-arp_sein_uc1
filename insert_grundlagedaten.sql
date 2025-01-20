@@ -20,7 +20,30 @@ VALUES
     ('Bundesinventare'),
     ('Agglomerationsprogramm'),
     ('Richtplaninhalt'),
-    ('Langsamverkehr')
+    ('Langsamverkehr'),
+    ('Foo-Gruppe')
+;
+
+INSERT INTO
+    arp_sein_konfig.grundlagen_thema
+    (
+        aname,
+        layerid,
+        gruppe_r
+    )
+SELECT 
+    'Foo-Thema',
+    'ch.so.afu.abbaustellen',
+    gruppe_t_id
+FROM 
+(
+    SELECT 
+        t_id AS gruppe_t_id,
+    FROM 
+        arp_sein_konfig.grundlagen_gruppe AS g 
+    WHERE 
+        aname = 'Foo-Gruppe'
+)
 ;
 
 INSERT INTO
@@ -205,6 +228,28 @@ INSERT INTO
     SELECT 
         'Velonetzkarte',
         'https://so.ch/fileadmin/internet/bjd/bjd-avt/pdf/Langsamverkehr/Velonetzplan_2019_web.pdf',
+        thema_t_id
+    FROM 
+    (
+        SELECT
+            t_id AS thema_t_id
+        FROM    
+            arp_sein_konfig.grundlagen_thema
+        WHERE 
+            aname = 'Velonetzkarte'
+    )
+; 
+
+INSERT INTO
+    arp_sein_konfig.grundlagen_objektinfo
+    (
+        information,
+        link,
+        thema_r
+    )
+    SELECT 
+        'Velonetzkarte',
+        'https://so.ch/fileadmin/internet/bjd/bjd-avt/pdf/Langsamverkehr/Velonetzplan-DUMMY.pdf',
         thema_t_id
     FROM 
     (

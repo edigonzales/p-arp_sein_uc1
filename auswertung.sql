@@ -1,8 +1,8 @@
-
-WITH objektinfo_by_gemeinde_thema AS 
+WITH objektinfos AS 
 (
     SELECT 
-        gem.aname AS gem_name,
+        gem.aname AS gemeinde_name,
+        gr.aname AS gruppe_name,
         t.aname AS thema_name,
         JSON_GROUP_ARRAY(
             JSON_OBJECT(
@@ -10,7 +10,7 @@ WITH objektinfo_by_gemeinde_thema AS
                 'Information', o.information,
                 'Link', o.link
             )    
-        )
+        ) AS objektinfos
     FROM 
         arp_sein_konfig.grundlagen_objektinfo AS o
         LEFT JOIN arp_sein_konfig.grundlagen_gemeinde_objektinfo AS gemobj
@@ -19,138 +19,109 @@ WITH objektinfo_by_gemeinde_thema AS
         ON gem.T_Id = gemobj.gemeinde_r 
         LEFT JOIN arp_sein_konfig.grundlagen_thema AS t 
         ON t.T_Id = o.thema_r
+        LEFT JOIN arp_sein_konfig.grundlagen_gruppe AS gr 
+        ON gr.T_Id = t.gruppe_r
     GROUP BY 
         gem.aname,
+        gr.aname,
         t.aname 
 )
-
-SELECT * FROM objektinfo_grouped
-
--- Auch Thema gruppieren nach gemeinde. Dann sollte ich 106 Zeilen haben oder so.
-
-;
-
-/*
-DELETE FROM 
-    arp_sein_konfig.auswertung_gemeinde
-;
-
-
-SELECT 
-    *
-FROM 
-    arp_sein_konfig.grundlagen_objektinfo AS o
-    LEFT JOIN arp_sein_konfig.grundlagen_gemeinde_objektinfo AS geo
-    ON o.T_Id = geo.objektinfo_r 
-WHERE 
-
-
-
-SELECT 
-    g.aname,
-    JSON_GROUP_ARRAY(
+,
+objektinfos_by_gemeinde_gruppe_thema AS (
+    SELECT
+        o.gemeinde_name,
+        o.gruppe_name,
+        o.thema_name,
+        JSON_OBJECT(
+            '@Type', 'SO_ARP_SEin_Konfiguration_20250115.Auswertung.Thema',
+            'Name', thema_name,
+            'LayerId', t.layerid,
+            'ist_betroffen', true,
+            'Objekinfos', o.objektinfos
+        ) AS thema
+    FROM 
+        objektinfos AS o 
+        LEFT JOIN arp_sein_konfig.grundlagen_thema AS t 
+        ON t.aname = o.thema_name
+)
+,
+-- Das ändert sich noch, aber vom Prinzip her geht es 
+-- in diese Richtung.
+themen_nicht_betroffen AS (
+    SELECT 
+        gem.aname AS gemeinde_name,
+        gr.aname AS gruppe_name,
+        t.aname AS thema_name,        
         JSON_OBJECT(
             '@Type', 'SO_ARP_SEin_Konfiguration_20250115.Auswertung.Thema',
             'Name', t.aname,
-            'LayerId', t.layerid
+            'LayerId', t.layerid,
+            'ist_betroffen', false
+        ) AS thema
+    FROM 
+        arp_sein_konfig.grundlagen_gemeinde AS gem,
+        arp_sein_konfig.grundlagen_thema AS t
+        LEFT JOIN arp_sein_konfig.grundlagen_gruppe AS gr 
+        ON t.gruppe_r = gr.T_Id
+    WHERE 
+        NOT EXISTS (
+            SELECT
+                1 
+            FROM
+                objektinfos_by_gemeinde_gruppe_thema AS oggt 
+            WHERE 
+                t.aname = oggt.thema_name AND gem.aname = oggt.gemeinde_name
         )
-    )
-FROM 
-    arp_sein_konfig.grundlagen_thema AS t
-    LEFT JOIN arp_sein_konfig.grundlagen_gruppe AS g 
-    ON t.gruppe_r = g.T_Id 
-GROUP BY
-    g.aname 
-;
-
-
-INSERT INTO
-    arp_sein_konfig.auswertung_gemeinde
-    (
-        aname,
-        boundingbox,
-        bfsnr,
-        geometrie,
-        gruppen
-    )
-
+)
+,
+alle_themen_pro_gemeinde_gruppe_thema AS (
+    SELECT 
+        * 
+    FROM 
+        objektinfos_by_gemeinde_gruppe_thema
+    UNION ALL
+    SELECT 
+        * 
+    FROM 
+        themen_nicht_betroffen
+    WHERE 
+        -- zwecks Übersicht
+        gemeinde_name = 'Solothurn'
+)
+,
+alle_themen_pro_gemeinde_gruppe AS (
+    SELECT 
+        gemeinde_name,
+        gruppe_name,
+        JSON_GROUP_ARRAY(
+            thema
+        ) AS themen
+    FROM 
+        alle_themen_pro_gemeinde_gruppe_thema
+    GROUP BY 
+        gemeinde_name,
+        gruppe_name
+)
 SELECT 
-    ge.aname,
-    --'['||ST_XMin(geometrie)||','||ST_YMin(geometrie)||','||ST_XMax(geometrie)||','||ST_YMax(geometrie)||']' AS bbox,
+    gemeinde_name,
     ge.bfsnr,
-    ge.geometrie,
-    JSON_GROUP_ARRAY(
-        JSON_OBJECT(
-            '@type', 'SO_ARP_SEin_Konfiguration_20250115.Auswertung.Gruppe',
-            'Name', gr.aname,
-            'Themen', t.themen
-        )    
-    )
-FROM    
-    arp_sein_konfig.grundlagen_gemeinde AS ge,
-    arp_sein_konfig.grundlagen_gruppe AS gr
-    LEFT JOIN 
-    (
-        SELECT 
-            g.aname,
-            JSON_GROUP_ARRAY(
-                JSON_OBJECT(
-                    '@Type', 'SO_ARP_SEin_Konfiguration_20250115.Auswertung.Thema',
-                    'Name', t.aname,
-                    'LayerId', t.layerid
-                )
-            ) AS themen
-        FROM 
-            arp_sein_konfig.grundlagen_thema AS t
-            LEFT JOIN arp_sein_konfig.grundlagen_gruppe AS g 
-            ON t.gruppe_r = g.T_Id 
-        GROUP BY
-            g.aname 
-    ) AS t 
-    ON t.aname = gr.aname 
-WHERE 
-    ge.aname = 'Buchegg'
-GROUP BY
-    ge.aname,
-    --bbox,
-    ge.bfsnr,
-    ge.geometrie 
-;
-
-
-DELETE FROM 
-    arp_sein_konfig.auswertung_gemeinde
-;
-
-INSERT INTO
-    arp_sein_konfig.auswertung_gemeinde
-    (
-        aname,
-        boundingbox,
-        bfsnr,
-        geometrie,
-        gruppen
-    )
-
-SELECT 
-    ge.aname,
     '['||ST_XMin(geometrie)||','||ST_YMin(geometrie)||','||ST_XMax(geometrie)||','||ST_YMax(geometrie)||']' AS bbox,
-    ge.bfsnr,
-    ge.geometrie,
     JSON_GROUP_ARRAY(
         JSON_OBJECT(
             '@type', 'SO_ARP_SEin_Konfiguration_20250115.Auswertung.Gruppe',
-            'Name', gr.aname
-        )    
-    )
-FROM    
-    arp_sein_konfig.grundlagen_gruppe AS gr,
-    arp_sein_konfig.grundlagen_gemeinde AS ge
-WHERE 
-    ge.aname = 'Buchegg'
-GROUP BY
-    ge.aname,
-    bbox,
+            'Name', gruppe_name,
+            'Themen', themen
+        )     
+    ) AS gruppen,
+    ge.geometrie
+FROM 
+    alle_themen_pro_gemeinde_gruppe AS tpgg
+    LEFT JOIN arp_sein_konfig.grundlagen_gemeinde AS ge 
+    ON tpgg.gemeinde_name = ge.aname
+GROUP BY 
+    gemeinde_name,
     ge.bfsnr,
-    ge.geometrie 
+    bbox,
+    ge.geometrie
 ;
+
