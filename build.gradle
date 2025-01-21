@@ -23,13 +23,17 @@ def dbUriDuckDB = 'jdbc:duckdb:./sein_konfig.duckdb'
 def dbUserDuckDB = '';
 def dbPwdDuckDB = '';
 
+// Gemeindedaten werden von Pub-DB in die Duck-DB (Grundlagen)
+// kopiert. Gelesen werden die Pub-DB-Daten direkt mit 
+// der DuckeDB-Postgres-Extension. Momentan Credentials
+// als ENV-Variablen. 
 tasks.register('copyGemeinden', SqlExecutor) {
     database = [dbUriDuckDB, dbUserDuckDB, dbPwdDuckDB]
     sqlFiles = ["copy_gemeinden.sql"]
 }
 
 // Ein paar Gruppen, Themen, Objektinfos erfassen. Muss
-// durch ARP manuell gemacht werden.
+// in Produktion durch ARP manuell gemacht werden.
 tasks.register('insertGrundlagedaten', SqlExecutor) {
     database = [dbUriDuckDB, dbUserDuckDB, dbPwdDuckDB]
     sqlFiles = ["insert_grundlagedaten.sql"]
