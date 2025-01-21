@@ -1,3 +1,5 @@
+DROP TABLE IF EXISTS auswertung;
+CREATE TEMP TABLE auswertung AS 
 WITH objektinfos AS 
 (
     SELECT 
@@ -6,7 +8,7 @@ WITH objektinfos AS
         t.aname AS thema_name,
         JSON_GROUP_ARRAY(
             JSON_OBJECT(
-                '@Type', 'SO_ARP_SEin_Konfiguration_20250115.Objektinfo',
+                '@type', 'SO_ARP_SEin_Konfiguration_20250115.Objektinfo',
                 'Information', o.information,
                 'Link', o.link
             )    
@@ -33,11 +35,11 @@ objektinfos_by_gemeinde_gruppe_thema AS (
         o.gruppe_name,
         o.thema_name,
         JSON_OBJECT(
-            '@Type', 'SO_ARP_SEin_Konfiguration_20250115.Auswertung.Thema',
+            '@type', 'SO_ARP_SEin_Konfiguration_20250115.Auswertung.Thema',
             'Name', thema_name,
             'LayerId', t.layerid,
             'ist_betroffen', true,
-            'Objekinfos', o.objektinfos
+            'Objektinfos', o.objektinfos
         ) AS thema
     FROM 
         objektinfos AS o 
@@ -53,7 +55,7 @@ themen_nicht_betroffen AS (
         gr.aname AS gruppe_name,
         t.aname AS thema_name,        
         JSON_OBJECT(
-            '@Type', 'SO_ARP_SEin_Konfiguration_20250115.Auswertung.Thema',
+            '@type', 'SO_ARP_SEin_Konfiguration_20250115.Auswertung.Thema',
             'Name', t.aname,
             'LayerId', t.layerid,
             'ist_betroffen', false
@@ -103,9 +105,9 @@ alle_themen_pro_gemeinde_gruppe AS (
         gruppe_name
 )
 SELECT 
-    gemeinde_name,
+    gemeinde_name AS aname,
     ge.bfsnr,
-    '['||ST_XMin(geometrie)||','||ST_YMin(geometrie)||','||ST_XMax(geometrie)||','||ST_YMax(geometrie)||']' AS bbox,
+    '['||ST_XMin(geometrie)||','||ST_YMin(geometrie)||','||ST_XMax(geometrie)||','||ST_YMax(geometrie)||']' AS boundingbox,
     JSON_GROUP_ARRAY(
         JSON_OBJECT(
             '@type', 'SO_ARP_SEin_Konfiguration_20250115.Auswertung.Gruppe',
@@ -121,7 +123,28 @@ FROM
 GROUP BY 
     gemeinde_name,
     ge.bfsnr,
-    bbox,
+    boundingbox,
     ge.geometrie
 ;
 
+DELETE FROM 
+    arp_sein_konfig.auswertung_gemeinde
+;
+INSERT INTO 
+    arp_sein_konfig.auswertung_gemeinde 
+    (
+        boundingbox,
+        gruppen,
+        aname,
+        bfsnr,
+        geometrie
+    )
+    SELECT 
+        boundingbox,
+        gruppen,
+        aname,
+        bfsnr,
+        geometrie
+    FROM 
+        auswertung
+;
