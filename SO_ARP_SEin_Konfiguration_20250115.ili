@@ -1,10 +1,10 @@
 INTERLIS 2.3;
 
 /** !!------------------------------------------------------------------------------
- *  !! Version    | wer | Änderung
- *  !!------------------------------------------------------------------------------
- *  !! 2025-01-15 | sz  | Ersterfassung
- *  !!==============================================================================
+ * !! Version    | wer | Änderung
+ * !!------------------------------------------------------------------------------
+ * !! 2025-01-15 | sz  | Ersterfassung
+ * !!==============================================================================
  */
 !!@ technicalContact=mailto:agi@bd.so.ch
 !!@ furtherInformation=http://geo.so.ch/models/ARP/SO_ARP_SEin_Konfiguration_20250115.uml
@@ -13,26 +13,28 @@ INTERLIS 2.3;
 MODEL SO_ARP_SEin_Konfiguration_20250115 (de)
 AT "https://arp.so.ch"
 VERSION "2025-01-15"  =
-  IMPORTS GeometryCHLV95_V1, Text;
+  IMPORTS GeometryCHLV95_V1,Text;
 
   CLASS Gemeinde (ABSTRACT) =
     /** Name der Gemeinde (gemäss amtlichem Verzeichnis)
-    */
+     */
     Name : MANDATORY TEXT*500;
     /** Offizielle Gemeindenummer
-    */
+     */
     BFSNr : MANDATORY 2000 .. 3000;
     /** Geometrie
-    */
+     */
     Geometrie : MANDATORY GeometryCHLV95_V1.MultiSurface;
   END Gemeinde;
 
-  STRUCTURE Gruppe = 
+  STRUCTURE Gruppe =
     /** Name der Themengruppe
      */
     Name : MANDATORY TEXT*500;
   END Gruppe;
 
+  /** TODO: unique constraint Name und Gruppen-Name.
+   */
   STRUCTURE Thema =
     /** Titel (Anzeigename) des Layers / der Layer.
      */
@@ -43,8 +45,6 @@ VERSION "2025-01-15"  =
     /** Transparenz in Prozent
      */
     LayerTransparenz : 0 .. 100;
-
-    !! TODO: unique constraint Name und Gruppen-Name.
   END Thema;
 
   /** Enthält Informationen zu einem (generischen) Objekt. Das sind ein Name / eine Beschreibung / eine Umbschreibung und ein Link z.B zu einem PDF oder eine Webseite.
@@ -55,57 +55,48 @@ VERSION "2025-01-15"  =
     Information : TEXT*1000;
     /** Link zum Objektblatt oder zu einer Webseite etc.
      */
-    Link : INTERLIS.URI;
+    Link : URI;
   END Objektinfo;
 
   TOPIC Auswertung =
 
-    STRUCTURE Thema 
+    STRUCTURE Thema
     EXTENDS SO_ARP_SEin_Konfiguration_20250115.Thema =
       /** Thema erweitert mit Objektinfos.
        */
-      !!@ili2db.mapping=JSON 
       Objektinfos : BAG {0..*} OF SO_ARP_SEin_Konfiguration_20250115.Objektinfo;
       /** Ist Gemeinde von diesem Thema betroffen?
        */
       ist_betroffen : BOOLEAN;
     END Thema;
 
-    STRUCTURE Gruppe 
-    EXTENDS SO_ARP_SEin_Konfiguration_20250115.Gruppe = 
+    STRUCTURE Gruppe
+    EXTENDS SO_ARP_SEin_Konfiguration_20250115.Gruppe =
       /** Gruppe erweitert mit Themenliste.
        */
-      !!@ili2db.mapping=JSON 
-      Themen : BAG {0..*} OF SO_ARP_SEin_Konfiguration_20250115.Auswertung.Thema;
+      Themen : BAG {1..*} OF SO_ARP_SEin_Konfiguration_20250115.Auswertung.Thema;
     END Gruppe;
-     
-    CLASS Gemeinde 
+
+    CLASS Gemeinde
     EXTENDS SO_ARP_SEin_Konfiguration_20250115.Gemeinde =
       /** Ausdehnung / Bounding Box
        */
       BoundingBox : MANDATORY TEXT*200;
       /** Liste sämtlicher Themen-Gruppen.
        */
-      !!@ili2db.mapping=JSON 
-      Gruppen :  BAG {1..*} OF SO_ARP_SEin_Konfiguration_20250115.Auswertung.Gruppe; 
+      Gruppen : BAG {1..*} OF SO_ARP_SEin_Konfiguration_20250115.Auswertung.Gruppe;
       UNIQUE Name;
       UNIQUE BFSNr;
-      !!@ ilivalid.msg="{BoundingBox} ist keine korrekt formatierte Bounding Box. Eine korrekte Formatierung muss in der Form '[xmin,ymin,xmax,ymax]' sein."
-      !!@ name=CheckBoundingBoxFormat
-      !!MANDATORY CONSTRAINT Text.matches(BoundingBox, "");
     END Gemeinde;
 
   END Auswertung;
 
-
-  !! Achtung:
-  /** Das funktioniert solange es immer eine Objektinfo gibt.
-   *  Dann weiss man, dass die Gemeinde von diesem Thema betroffen ist.
-   *  Scheint gemässt Liste jetzt so zu sein ("keine Geodaten"). 
-   *  Sonst bräuchte es noch eine Assoziation zw. Thema und Gemeinde
-   *  und zusätzlichen Umbaulogik von Grundlagen zu Auswertung.
+  /** Achtung: Das funktioniert solange es immer eine Objektinfo gibt.
+   * Dann weiss man, dass die Gemeinde von diesem Thema betroffen ist.
+   * Scheint gemässt Liste jetzt so zu sein ("keine Geodaten").
+   * Sonst bräuchte es noch eine Assoziation zw. Thema und Gemeinde
+   * und zusätzlichen Umbaulogik von Grundlagen zu Auswertung.
    */
-
   TOPIC Grundlagen =
 
     CLASS Gemeinde
@@ -114,7 +105,7 @@ VERSION "2025-01-15"  =
       UNIQUE BFSNr;
     END Gemeinde;
 
-    CLASS Gruppe 
+    CLASS Gruppe
     EXTENDS SO_ARP_SEin_Konfiguration_20250115.Gruppe =
     END Gruppe;
 
@@ -122,7 +113,7 @@ VERSION "2025-01-15"  =
     EXTENDS SO_ARP_SEin_Konfiguration_20250115.Objektinfo =
     END Objektinfo;
 
-    CLASS Thema 
+    CLASS Thema
     EXTENDS SO_ARP_SEin_Konfiguration_20250115.Thema =
     END Thema;
 
